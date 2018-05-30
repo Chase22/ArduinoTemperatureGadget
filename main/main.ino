@@ -1,3 +1,5 @@
+#include <Adafruit_Sensor.h>
+
 #include <Adafruit_BME280.h>
 
 #include <Adafruit_BME280.h>
@@ -12,9 +14,10 @@ float temp;
 float humid;
 float pressure;
 
-bool last_state_time;
-bool last_state_unit;
-bool last_state_show;
+int mode = 3;
+
+int state_time;
+int last_state_time;
 
 Adafruit_BME280 bme;
 
@@ -24,21 +27,50 @@ void readValues() {
   pressure = bme.readPressure();
 }
 
+void setMode() {
+  switch (mode) {
+    case 0:
+      FlexiTimer2::set(15000, readValues); // call every 15 seconds
+      break;
+    case 1:
+      FlexiTimer2::set(30000, readValues); // call every 30 seconds
+      break;
+    case 2:
+      FlexiTimer2::set(60000, readValues); // call every minute
+      break;
+    case 3:
+      FlexiTimer2::set(300000, readValues); // call every 5 minutes
+      break;
+    case 4:
+      FlexiTimer2::set(900000, readValues); // call every 15 minutes
+      break;
+    default:
+      mode = 0;
+      break;
+  }
+}
+
 void setup() {
-  status = bme::begin();
+  bool status = bme.begin();
 
   if (!status) {
-        Serial.println("Could not find a valid BME280 sensor, check wiring!");
-        while (1);
+    Serial.println("Could not find a valid BME280 sensor, check wiring!");
+    while (1);
   }
 
-  setPinMode(PinTime, INPUT);
-  setPinMode(PinTempUnit, INPUT);
-  setPinMode(PinShow, INPUT_PULLUP);
-  
-  FlexiTimer2::set(100, readValues());
+  pinMode(PinTime, INPUT);
+  pinMode(PinTempUnit, INPUT);
+  pinMode(PinShow, INPUT);
+
+  setMode();
 }
 
 void loop() {
-  
+  state_time = digitalRead(PinTime);
+
+  if (state_time != last_state_time) {
+    mode++;
+    setMode();
+  }
+
 }
